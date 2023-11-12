@@ -8,6 +8,21 @@ module Tetris
     MIN_FRAMES_PER_MOVE = SPEEDS.last
     MAX_SPEED = SPEEDS.count - 1
 
+    LEFT_BUTTON_X = 215
+    LEFT_BUTTON_Y = 100
+    LEFT_BUTTON_HEIGHT = 50
+    LEFT_BUTTON_WIDTH = 50
+
+    RIGHT_BUTTON_X = 1015
+    RIGHT_BUTTON_Y = 100
+    RIGHT_BUTTON_HEIGHT = 50
+    RIGHT_BUTTON_WIDTH = 50
+
+    ROTATE_BUTTON_X = 1015
+    ROTATE_BUTTON_Y = 500
+    ROTATE_BUTTON_HEIGHT = 50
+    ROTATE_BUTTON_WIDTH = 50
+
     def initialize(args, grid_x: nil, grid_y: nil, box_size: 26, start_speed: 1)
       @args = args
       @grid = Grid.new
@@ -22,6 +37,8 @@ module Tetris
       @should_plant = false
 
       @kb = @args.inputs.keyboard
+      @ms = @args.inputs.mouse
+
       @held_key_throttle_by = 0
 
       @lines = 0
@@ -115,24 +132,52 @@ module Tetris
       end
       return if @pause
 
-      if @kb.key_down.up
+      if rotate_key_down?
         @current_shape.rotate && postpone_and_prevent_planting
       end
-      if @kb.key_down.left || (@kb.key_held.left && held_key_check)
+      if move_left_key_down? || (move_left_key_held? && held_key_check)
         @current_shape.move_left && postpone_and_prevent_planting
-        throttle_held_key(@kb.key_down.left)
+        throttle_held_key(move_left_key_down?)
       end
-      if @kb.key_down.right || (@kb.key_held.right && held_key_check)
+      if move_right_key_down? || (move_right_key_held? && held_key_check)
         @current_shape.move_right && postpone_and_prevent_planting
-        throttle_held_key(@kb.key_down.right)
+        throttle_held_key(move_right_key_down?)
       end
-      if @kb.key_down.down || (@kb.key_held.down && held_key_check)
+      if @kb.key_down.down || @kb.key_held.down
         @current_shape.move_down && postpone_and_prevent_planting
         throttle_held_key(false)
       end
       if @kb.key_down.space
         @current_shape.drop && hasten_planting
       end
+    end
+
+    def mouse_down?(x, y, height, width)
+      @ms.click&.point&.inside_rect?([x, y, height, width])
+    end
+
+    def mouse_held?(x, y, height, width)
+      @ms.held && @ms.point&.inside_rect?([x, y, height, width])
+    end
+
+    def move_left_key_down?
+      @kb.key_down.left || mouse_down?(LEFT_BUTTON_X, LEFT_BUTTON_Y, LEFT_BUTTON_HEIGHT, LEFT_BUTTON_WIDTH)
+    end
+
+    def move_left_key_held?
+      @kb.key_held.left || mouse_held?(LEFT_BUTTON_X, LEFT_BUTTON_Y, LEFT_BUTTON_HEIGHT, LEFT_BUTTON_WIDTH)
+    end
+
+    def move_right_key_down?
+      @kb.key_down.right || mouse_down?(RIGHT_BUTTON_X, RIGHT_BUTTON_Y, RIGHT_BUTTON_HEIGHT, RIGHT_BUTTON_WIDTH)
+    end
+
+    def move_right_key_held?
+      @kb.key_held.right || mouse_held?(RIGHT_BUTTON_X, RIGHT_BUTTON_Y, RIGHT_BUTTON_HEIGHT, RIGHT_BUTTON_WIDTH)
+    end
+
+    def rotate_key_down?
+      @kb.key_down.up || mouse_down?(ROTATE_BUTTON_X, ROTATE_BUTTON_Y, ROTATE_BUTTON_HEIGHT, ROTATE_BUTTON_WIDTH)
     end
 
     def hasten_planting
@@ -221,7 +266,7 @@ module Tetris
       render_boxes(@grid)
       render_boxes(@current_shape)
       return render_game_over if @game_over
-
+      render_controll_buttons
       render_speed
       render_score
       render_next_shape
@@ -233,6 +278,12 @@ module Tetris
     def tick
       iterate
       render
+    end
+
+    def render_controll_buttons
+      out.solids << [LEFT_BUTTON_X, LEFT_BUTTON_Y, LEFT_BUTTON_HEIGHT, LEFT_BUTTON_WIDTH, 255, 0, 0]
+      out.solids << [RIGHT_BUTTON_X, RIGHT_BUTTON_Y, RIGHT_BUTTON_HEIGHT, RIGHT_BUTTON_WIDTH, 255, 0, 0]
+      out.solids << [ROTATE_BUTTON_X, ROTATE_BUTTON_Y, ROTATE_BUTTON_HEIGHT, ROTATE_BUTTON_WIDTH, 255, 0, 0]
     end
 
     def render_speed
